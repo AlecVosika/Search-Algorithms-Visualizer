@@ -1,326 +1,244 @@
 import pygame
-import time
 import sys
-from queue import Queue
+import math
+from tkinter import *
+from tkinter import ttk
+from tkinter import messagebox
+import os
 
-"""
- Example program to show using an array to back a grid on-screen.
- 
- Sample Python/Pygame Programs
- Simpson College Computer Science
- http://programarcadegames.com/
- http://simpson.edu/computer-science/
- 
- Explanation video: http://youtu.be/mdTeqiWyFnc
-"""
+class spot:
+    def __init__(self, x, y):
+        self.i = x
+        self.j = y
+        self.f = 0
+        self.g = 0
+        self.h = 0
+        self.neighbors = []
+        self.previous = None
+        self.obs = False
+        self.closed = False
+        self.value = 1
+
+    def show(self, color, st):
+        if self.closed == False :
+            pygame.draw.rect(screen, color, (self.i * w, self.j * h, w, h), st)
+            pygame.display.update()
+
+    def path(self, color, st):
+        pygame.draw.rect(screen, color, (self.i * w, self.j * h, w, h), st)
+        pygame.display.update()
+
+    def addNeighbors(self, grid):
+        i = self.i
+        j = self.j
+        if i < cols-1 and grid[self.i + 1][j].obs == False:
+            self.neighbors.append(grid[self.i + 1][j])
+        if i > 0 and grid[self.i - 1][j].obs == False:
+            self.neighbors.append(grid[self.i - 1][j])
+        if j < row-1 and grid[self.i][j + 1].obs == False:
+            self.neighbors.append(grid[self.i][j + 1])
+        if j > 0 and grid[self.i][j - 1].obs == False:
+            self.neighbors.append(grid[self.i][j - 1])
+
+def onsubmit():
+    global start
+    global end
+    st = startBox.get().split(',')
+    ed = endBox.get().split(',')
+    start = grid[int(st[0])][int(st[1])]
+    end = grid[int(ed[0])][int(ed[1])]
+    window.quit()
+    window.destroy()
+
+def mousePress(x):
+    t = x[0]
+    w = x[1]
+    g1 = t // (800 // cols)
+    g2 = w // (800 // row)
+    acess = grid[g1][g2]
+    if acess != start and acess != end:
+        if acess.obs == False:
+            acess.obs = True
+            acess.show((255, 255, 255), 0)
+
+def heurisitic(n, e):
+    d = math.sqrt((n.i - e.i)**2 + (n.j - e.j)**2)
+    #d = abs(n.i - e.i) + abs(n.j - e.j)
+    return d
 
 
-def main(grid):
-    # creates the grid list
- 
-    # Loop until the user clicks the close button.
-    while running == True:
-        for event in pygame.event.get():  # User did something
-            if event.type == pygame.QUIT:  # If user clicked close
-                quit()  # Flag that we are done so we exit this loop
-            try:
-                if pygame.mouse.get_pressed()[0]: # Left Click
-                    # User clicks the mouse. Get the position
-                    pos = pygame.mouse.get_pos()
-                    # Change the x/y screen coordinates to grid coordinates
-                    column = pos[0] // (WIDTH + MARGIN)
-                    row = pos[1] // (HEIGHT + MARGIN)
-                    # Set that location to one
-                    grid[row][column] = 1
+def main():
+    end.show((255, 8, 127), 0)
+    start.show((255, 8, 127), 0)
+    if len(openSet) > 0:
+        lowestIndex = 0
+        for i in range(len(openSet)):
+            if openSet[i].f < openSet[lowestIndex].f:
+                lowestIndex = i
 
-                if pygame.mouse.get_pressed()[2]: # Right click
-                    # User clicks the mouse. Get the position
-                    pos = pygame.mouse.get_pos()
-                    # Change the x/y screen coordinates to grid coordinates
-                    column = pos[0] // (WIDTH + MARGIN)
-                    row = pos[1] // (HEIGHT + MARGIN)
-                    # Set that location to one
-                    grid[row][column] = 0
-                    
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        quit()
+        current = openSet[lowestIndex]
+        if current == end:
+            print('done', current.f)
+            start.show((255,8,127),0)
+            temp = current.f
+            for i in range(round(current.f)):
+                current.closed = False
+                current.show((0,0,255), 0)
+                current = current.previous
+            end.show((255, 8, 127), 0)
 
-                    if event.key == pygame.K_s:
-                        # User clicks the mouse. Get the position
-                        pos = pygame.mouse.get_pos()
-                        # Change the x/y screen coordinates to grid coordinates
-                        column = pos[0] // (WIDTH + MARGIN)
-                        row = pos[1] // (HEIGHT + MARGIN)
-                        # Set that location to one
-                        grid[row][column] = 2
-                        print("Start Grid coordinates:", row, column, end="\n\n")
+            Tk().wm_withdraw()
+            result = messagebox.askokcancel('Program Finished', ('The program finished, the shortest distance \n to the path is ' + str(temp) + ' blocks away, \n would you like to re run the program?'))
+            if result == True:
+                os.execl(sys.executable,sys.executable, *sys.argv)
+            else:
+                ag = True
+                while ag:
+                    ev = pygame.event.get()
+                    for event in ev:
+                        if event.type == pygame.KEYDOWN:
+                            ag = False
+                            break
+            pygame.quit()
 
-                    if event.key == pygame.K_f:
-                        # User clicks the mouse. Get the position
-                        pos = pygame.mouse.get_pos()
-                        # Change the x/y screen coordinates to grid coordinates
-                        column = pos[0] // (WIDTH + MARGIN)
-                        row = pos[1] // (HEIGHT + MARGIN)
-                        # Set that location to one
-                        grid[row][column] = 3
-                        print("End Grid coordinates:", row, column, end="\n\n")
+        openSet.pop(lowestIndex)
+        closedSet.append(current)
 
-                    if event.key == pygame.K_1:
-                        print("Starting BFS algorithm...", end="\n")
-                        start = findStart(grid)
-                        if start == None:
-                            print("BFS canceled because start location was missing", end="\n\n")
+        neighbors = current.neighbors
+        for i in range(len(neighbors)):
+            neighbor = neighbors[i]
+            if neighbor not in closedSet:
+                tempG = current.g + current.value
+                if neighbor in openSet:
+                    if neighbor.g > tempG:
+                        neighbor.g = tempG
+                else:
+                    neighbor.g = tempG
+                    openSet.append(neighbor)
 
-                        else:
-                            end = findEnd(grid)
-                            if end == None:
-                                print("BFS canceled because end location was missing", end="\n\n")
+            neighbor.h = heurisitic(neighbor, end)
+            neighbor.f = neighbor.g + neighbor.h
 
-                            else:
-                                try:
-                                    path = (BFS(grid, start, end))
-                                    for i in path:
-                                        x,y = i
-                                        grid[x][y] = 4
-                                    print("Finished BFS algorithm.", end="\n\n")
-                                except TypeError:
-                                    print("No path found.", end="\n\n")
-                                    removeVisualTrail(grid)
+            if neighbor.previous == None:
+                neighbor.previous = current
+    if var.get():
+        for i in range(len(openSet)):
+            openSet[i].show(green, 0)
 
-                    if event.key == pygame.K_0: # Clears the board
-                        grid = [
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-                        print("clearing grid", end="\n\n")
-                    if event.key == pygame.K_9: # preset maze 1
-                        grid = [
-                            [2, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], 
-                            [0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0], 
-                            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0], 
-                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], 
-                            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3]]
-                        print("Loading preset 1", end="\n\n")
-                    if event.key == pygame.K_8: # preset maze 2
-                        grid = [
-                            [2, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], 
-                            [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-                            [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0], 
-                            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0], 
-                            [0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0], 
-                            [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0], 
-                            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0], 
-                            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-                            [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], 
-                            [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1], 
-                            [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0], 
-                            [0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0], 
-                            [0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], 
-                            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0], 
-                            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0], 
-                            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 3]]
-                        print("Loading preset 2", end="\n\n")
+        for i in range(len(closedSet)):
+            if closedSet[i] != start:
+                closedSet[i].show(red, 0)
+    current.closed = True
 
-            except IndexError:
-                pass
-                    
 
-        drawGrid(grid)
+####################################################################################################
+####################################################################################################
 
-def drawGrid(grid):
-    # Set the screen background
-    screen.fill(BLACK)
-    # Draw the grid
-    for row in range(20):
-        for column in range(20):
-            if grid[row][column] == 0:
-                color = WHITE
-            elif grid[row][column] == 1:
-                color = BLACK
-            elif grid[row][column] == 2:
-                color = GREEN
-            elif grid[row][column] == 3:
-                color = RED
-            elif grid[row][column] == 4:
-                color = BLUE
-            elif grid[row][column] == 5:
-                color = BLUE
+if __name__ == "__main__":
 
-            draw = pygame.draw.rect(screen,
-                        color,
-                        [(MARGIN + WIDTH) * column + MARGIN,
-                        (MARGIN + HEIGHT) * row + MARGIN,
-                        WIDTH,
-                        HEIGHT])
-    # Limit to 60 frames per second
-    clock.tick(60)
-    # Go ahead and update the screen with what we've drawn.
-    pygame.display.flip()
+    screen = pygame.display.set_mode((800, 800))
 
-def createGrid(grid):
-    for row in range(20):
-        # Add an empty array that will hold each cell
-        # in this row
-        grid.append([])
-        for column in range(20):
-            grid[row].append(0)  # Append a cell
 
-def findStart(grid):
-    print("    Finding start location...", end="\n")
-    for row in range(len(grid)): # row
-        for column in range(len(grid[0])): #column
-            if grid[row][column] == 2:
-                print("    Start location: ", str(tuple([row, column])), end="\n")
-                return tuple([row, column])
-    return None
+    cols = 50
+    grid = [0 for i in range(cols)]
+    row = 50
+    openSet = []
+    closedSet = []
+    red = (255, 0, 0)
+    green = (0, 255, 0)
+    blue = (0, 0, 255)
+    grey = (220, 220, 220)
+    w = 800 / cols
+    h = 800 / row
+    cameFrom = []
 
-def findEnd(grid):
-    print("    Finding end location...", end="\n")
-    for row in range(len(grid)):
-        for column in range(len(grid[0])):
-            if grid[row][column] == 3:
-                print("    End location: ", str(tuple([row, column])), end="\n")
-                return tuple([row, column])
-    return None
+    # create 2d array
+    for i in range(cols):
+        grid[i] = [0 for i in range(row)]
 
-def BFS(grid, start, end):
-    basic_operations = 0
-    queue = [start]
-    visited = set()
+    # Create Spots
+    for i in range(cols):
+        for j in range(row):
+            grid[i][j] = spot(i, j)
 
-    while len(queue) != 0:
-        if queue[0] == start:
-            path = [queue.pop(0)]  # Required due to a quirk with tuples in Python
-        else:
-            path = queue.pop(0)
-        front = path[-1]
-        if front == end:
-            removeVisualTrail(grid)
-            path = path[1:-1] # removes first and last coordinate in list
-            return path
-        elif front not in visited:
-            for adjacentSpot in getAdjacentSpots(grid, front, visited):
-                newPath = list(path)
-                newPath.append(adjacentSpot)
-                queue.append(newPath)
 
-                x,y=adjacentSpot
-                if grid[x][y] == 0:
-                    grid[x][y] = 5
-                    drawGrid(grid)
-                    # time.sleep(1)
-
-                basic_operations += 1
-            visited.add(front)
-    return None
-
-def getAdjacentSpots(grid, spot, visited):
-    spots = list()
-
-    if spot[0]-1 >= 0 and spot[0]-1 <= 19: # Up
-        spots.append((spot[0]-1, spot[1]))
-    if spot[1]+1 >= 0 and spot[1]+1 <= 19: # Right
-        spots.append((spot[0], spot[1]+1))
-    if spot[0]+1 >= 0 and spot[0]+1 <= 19: # Down
-        spots.append((spot[0]+1, spot[1]))
-    if spot[1]-1 >= 0 and spot[1]-1 <= 19: # Left   
-        spots.append((spot[0], spot[1]-1)) 
-    if spot[0]-1 >= 0 and spot[0]-1 <= 19 and spot[1]-1 >= 0 and spot[1]-1 <= 19: # up left
-        spots.append((spot[0]-1, spot[1]-1)) 
-    if spot[0]-1 >= 0 and spot[0]-1 <= 19 and spot[1]+1 >= 0 and spot[1]+1 <= 19: # up right
-        spots.append((spot[0]-1, spot[1]+1))
-    if spot[0]+1 >= 0 and spot[0]+1 <= 19 and spot[1]+1 >= 0 and spot[1]+1 <= 19: # down right
-        spots.append((spot[0]+1, spot[1]+1))
-    if spot[0]+1 >= 0 and spot[0]+1 <= 19 and spot[1]-1 >= 0 and spot[1]-1 <= 19: # down left
-        spots.append((spot[0]+1, spot[1]-1)) 
-
-    final = list()
-    for i in spots:
-        if grid[i[0]][i[1]] != 1 and i not in visited:
-            final.append(i)
-    return final
-
-def removeVisualTrail(grid):
-    for row in range(len(grid)): # row
-        for column in range(len(grid[0])): #column
-            if grid[row][column] == 5:
-                grid[row][column] = 0
-    drawGrid(grid)
-
-def quit():
-    print("Closing application.")
-    pygame.quit()
-    raise SystemExit(0)
-
-if __name__ == "__main__" :
-    print("\n"*2)
-    # creates the grid list
-    grid = []
-
-    # Define some colors
-    BLACK = (0, 0, 0)
-    WHITE = (255, 255, 255)
-    GREEN = (0, 255, 0)
-    RED = (255, 0, 0)
-    GREY = (220,220,220)
-    BLUE = (0,0,255)
+    # Set start and end node
+    start = grid[12][5]
+    end = grid[3][6]
     
-    # This sets the WIDTH and HEIGHT of each grid location
-    WIDTH = 40
-    HEIGHT = 40
-    
-    # This sets the margin between each cell
-    MARGIN = 1
+    # SHOW RECT
+    for i in range(cols):
+        for j in range(row):
+            grid[i][j].show((255, 255, 255), 1)
 
-    # Initialize pygame
+    for i in range(0,row):
+        grid[0][i].show(grey, 0)
+        grid[0][i].obs = True
+        grid[cols-1][i].obs = True
+        grid[cols-1][i].show(grey, 0)
+        grid[i][row-1].show(grey, 0)
+        grid[i][0].show(grey, 0)
+        grid[i][0].obs = True
+        grid[i][row-1].obs = True
+
+####################################################################################################
+
+    window = Tk()
+    label = Label(window, text='Start(x,y): ')
+    startBox = Entry(window)
+    label1 = Label(window, text='End(x,y): ')
+    endBox = Entry(window)
+    var = IntVar()
+    showPath = ttk.Checkbutton(window, text='Show Steps :', onvalue=1, offvalue=0, variable=var)
+
+    submit = Button(window, text='Submit', command=onsubmit)
+
+    showPath.grid(columnspan=2, row=2)
+    submit.grid(columnspan=2, row=3)
+    label1.grid(row=1, pady=3)
+    endBox.grid(row=1, column=1, pady=3)
+    startBox.grid(row=0, column=1, pady=3)
+    label.grid(row=0, pady=3)
+
+    window.update()
+    mainloop()
+
     pygame.init()
-    # Set the HEIGHT and WIDTH of the screen
-    WINDOW_SIZE = [821, 821]
-    screen = pygame.display.set_mode(WINDOW_SIZE)
-    
-    # Set title of screen
-    pygame.display.set_caption("My App")
+    openSet.append(start)
 
-    # Used to manage how fast the screen updates
-    clock = pygame.time.Clock()
+####################################################################################################
 
-    running = True
-    createGrid(grid)
-    main(grid)
+    end.show((255, 8, 127), 0)
+    start.show((255, 8, 127), 0)
+
+    loop = True
+    while loop:
+        ev = pygame.event.get()
+
+        for event in ev:
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            if pygame.mouse.get_pressed()[0]:
+                try:
+                    pos = pygame.mouse.get_pos()
+                    mousePress(pos)
+                except AttributeError:
+                    pass
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    loop = False
+                    break
+
+    for i in range(cols):
+        for j in range(row):
+            grid[i][j].addNeighbors(grid)
+
+####################################################################################################
+####################################################################################################
+
+    while True:
+        ev = pygame.event.poll()
+        if ev.type == pygame.QUIT:
+            pygame.quit()
+        pygame.display.update()
+        main()
