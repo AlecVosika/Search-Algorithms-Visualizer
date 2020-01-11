@@ -45,7 +45,7 @@ def main(grid):
                         grid[row][column] = 2 # Set that grid location to 2
                         print("Start Grid coordinates:", row, column, end="\n\n")
                     # code for Placing the end position
-                    elif event.key == pygame.K_f: # if the button clicked was F
+                    elif event.key == pygame.K_e: # if the button clicked was F
                         grid[row][column] = 3 # Set that grid location to 3
                         print("End Grid coordinates:", row, column, end="\n\n")
                     # Debug code for printing the grid
@@ -200,8 +200,40 @@ def drawGrid(grid):
                         WIDTH,
                         HEIGHT])
 
+            drawText()
+
     clock.tick(60) # Limit to 60 frames per second
     pygame.display.flip() # Updates screen after drawing
+
+def drawText():
+    # render text
+    keyBindsDict = {"Left click": "black",
+                    "Right click": "white",
+                    "S": "start",
+                    "E": "end", 
+                    "1": "BFS Algorithm"
+                    }
+    label = myfont.render("Key Binds", 0, (255,255,0))
+    screen.blit(label, (875, 0))
+    x,y = 821,20
+    for key in keyBindsDict:
+        label = myfont.render(key + " = " + keyBindsDict.get(key), 0, (255,255,255))
+        screen.blit(label, (x, y))
+        y += 20
+    y += 20
+
+    presetsDict = {"0": "clear grid",
+                   "9": "maze preset 1",
+                   "8": "maze preset 2",
+                   "7": "maze preset 3",
+                    }
+    label = myfont.render("Layout presets", 0, (255,255,0))
+    screen.blit(label, (855, y))
+    y += 20
+    for key in presetsDict:
+        label = myfont.render(key + " = " + presetsDict.get(key), 0, (255,255,255))
+        screen.blit(label, (x, y))
+        y += 20    
 
 def createGrid(grid):
     for row in range(20):
@@ -316,9 +348,12 @@ if __name__ == "__main__" :
     # Initialize pygame
     pygame.init()
     # Set the HEIGHT and WIDTH of the screen
-    WINDOW_SIZE = [821, 821]
+    WINDOW_SIZE = [1051, 821]
     screen = pygame.display.set_mode(WINDOW_SIZE)
     
+    # Sets font for instructions
+    myfont = pygame.font.SysFont("monospace", 18)
+
     # Set title of screen
     pygame.display.set_caption("My App")
 
