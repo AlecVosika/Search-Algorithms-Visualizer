@@ -62,8 +62,8 @@ def drawText():
                     "1": "BFS Algorithm"
                     }
     label = myfont.render("Key Binds", 0, (255,255,0))
-    screen.blit(label, (875, 0))
-    x,y = 821,20
+    screen.blit(label, (675, 0))
+    x,y = 621,20
     for key in keyBindsDict:
         label = myfont.render(key + " = " + keyBindsDict.get(key), 0, (255,255,255))
         screen.blit(label, (x, y))
@@ -76,7 +76,7 @@ def drawText():
                    "7": "maze preset 3",
                     }
     label = myfont.render("Layout presets", 0, (255,255,0))
-    screen.blit(label, (855, y))
+    screen.blit(label, (655, y))
     y += 20
     for key in presetsDict:
         label = myfont.render(key + " = " + presetsDict.get(key), 0, (255,255,255))
@@ -360,15 +360,15 @@ if __name__ == "__main__":
     numOfRows = 20
     numOfColumns = 30
     # This sets the WIDTH and HEIGHT of each grid location
-    WIDTH = 40
-    HEIGHT = 40
+    WIDTH = 30
+    HEIGHT = 30
     # This sets the margin between each cell
     MARGIN = 1
     
     # Initialize pygame
     pygame.init()
     # Set the HEIGHT and WIDTH of the screen
-    WINDOW_SIZE = [1051, 821]
+    WINDOW_SIZE = [851, 621]
     screen = pygame.display.set_mode(WINDOW_SIZE)
     
     # Sets font for instructions
